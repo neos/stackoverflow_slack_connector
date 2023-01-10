@@ -1,6 +1,7 @@
 <?php
 /**
- * This file is part of the TYPO3 CMS project.
+ * This file was part of the TYPO3 CMS project. It has been forked and
+ * adjusted for Neos.
  *
  * It is free software; you can redistribute it and/or modify it under
  * the terms of the GNU General Public License, either version 2
@@ -8,11 +9,9 @@
  *
  * For the full copyright and license information, please read the
  * LICENSE.txt file that was distributed with this source code.
- *
- * The TYPO3 project - inspiring people to share!
  */
 
-class PostNewTypo3Posts
+class PostNewQuestions
 {
 
     /**
@@ -33,21 +32,6 @@ class PostNewTypo3Posts
     protected string $apiTagUrl = 'https://api.stackexchange.com/2.2/questions?site=stackoverflow&filter=withbody&order=asc';
 
     /**
-     * @var string
-     */
-    protected string $fileWithTimestampOfLastExecution = 'last_execution.txt';
-
-    /**
-     * @var string
-     */
-    protected string $fileWithStackAppsKey = 'key.txt';
-
-    /**
-     * @var string
-     */
-    protected string $fileWithConfigurationOfWebHookUrls = 'webhooks.ini';
-
-    /**
      * @var array
      */
     protected array $webhooks = [];
@@ -57,7 +41,7 @@ class PostNewTypo3Posts
      */
     public function setStackAppsKey()
     {
-        $this->stackAppsKey = str_replace("\n", '', file_get_contents($this->fileWithStackAppsKey));
+        $this->stackAppsKey = str_replace("\n", '', file_get_contents(getenv('keyfile')));
     }
 
     /**
@@ -65,7 +49,7 @@ class PostNewTypo3Posts
      */
     public function getMainTags()
     {
-        return array_keys(parse_ini_file($this->fileWithConfigurationOfWebHookUrls, true));
+        return array_keys(parse_ini_file(getenv('hooksfile'), true));
     }
 
     /**
@@ -73,7 +57,7 @@ class PostNewTypo3Posts
      */
     public function setWebHookUrls()
     {
-        $this->webhooks = parse_ini_file($this->fileWithConfigurationOfWebHookUrls, true);
+        $this->webhooks = parse_ini_file(getenv('hooksfile'), true);
     }
 
     /**
@@ -91,7 +75,7 @@ class PostNewTypo3Posts
                         'fallback' => 'New question in StackOverflow: ' . $question['title'],
                         'title' => $question['title'],
                         'title_link' => $question['link'],
-                        'thumb_url' => $question['owner']['profile_image'],
+                        'thumb_url' => $question['owner']['profile_image'] ?? '',
                         'text' => str_replace(
                             ['&', '<p>', '</p>', '<', '>'],
                             ['&amp;', '', '', '&lt;', '&gt;'],
@@ -141,26 +125,17 @@ class PostNewTypo3Posts
      * @param string $tag
      * @return array|null
      */
-    public function getNewestPostsInStackOverflow(string $tag = 'typo3'): ?array
+    public function getNewestPostsInStackOverflow(string $tag): ?array
     {
-        $lastExecution = (int)file_get_contents($this->fileWithTimestampOfLastExecution) ?: 0;
+        $lastExecution = time() - 24 * 3600;
         $taggedQuestionsUrl = $this->apiTagUrl . '&tagged=' . $tag . '&key=' . $this->stackAppsKey . '&fromdate=' . $lastExecution;
         $questions = file_get_contents('compress.zlib://' . $taggedQuestionsUrl);
 
         return json_decode($questions, true);
     }
-
-    /**
-     * @return void
-     */
-    public function setNewTimestamp(): void
-    {
-        file_put_contents($this->fileWithTimestampOfLastExecution, time());
-    }
-
 }
 
-$newPostService = new PostNewTypo3Posts();
+$newPostService = new PostNewQuestions();
 $newPostService->setStackAppsKey();
 $newPostService->setWebHookUrls();
 $tags = $newPostService->getMainTags();
@@ -168,8 +143,4 @@ foreach ($tags as $tag) {
     $newestQuestions = $newPostService->getNewestPostsInStackOverflow($tag);
     $postData = $newPostService->convertQuestionToSlackData($tag, $newestQuestions);
     $newPostService->sendPostToSlack($tag, $postData);
-}
-
-if (!empty($postData)) {
-    $newPostService->setNewTimestamp();
 }

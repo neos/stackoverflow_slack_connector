@@ -20,13 +20,6 @@ class PostNewQuestions
     protected string $stackAppsKey = '';
 
     /**
-     * WebHook URL to channel #stackoverflow
-     *
-     * @var string
-     */
-    protected string $slackUrl = '';
-
-    /**
      * @var string
      */
     protected string $apiTagUrl = 'https://api.stackexchange.com/2.2/questions?site=stackoverflow&filter=withbody&order=asc';

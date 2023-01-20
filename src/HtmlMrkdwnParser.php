@@ -21,10 +21,10 @@ class HtmlMrkdwnParser
                     return sprintf("<%s|%s>", $match[1], $match[2]);
                 },
                 '#<div[^>]*class="snippet"[^>]*>\s*<div[^>]*>\s*<pre[^>]*>\s*<code[^>]*>([^<]*)</code>\s*</pre>\s*</div>\s*</div>#' => function ($match) {
-                    return sprintf("```\n%s\n```", trim($match[1]));
+                    return sprintf("```\n%s\n```\n", trim($match[1]));
                 },
                 '#<pre[^>]*>\s*<code[^>]*>([^<]*)</code>\s*</pre>#' => function ($match) {
-                    return sprintf("```\n%s\n```", trim($match[1]));
+                    return sprintf("```\n%s\n```\n", trim($match[1]));
                 },
                 '#<ol[^>]*>(.*?)</ol>#s' => function ($match) {
                     $itemNumber = 0;

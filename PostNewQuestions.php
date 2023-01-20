@@ -20,16 +20,14 @@ class PostNewQuestions
     protected string $stackAppsKey = '';
 
     /**
-     * WebHook URL to channel #stackoverflow
-     *
      * @var string
      */
-    protected string $slackUrl = '';
+    protected string $apiTagUrl = 'https://api.stackexchange.com/2.2/questions?site=stackoverflow&filter=withbody&order=asc';
 
     /**
      * @var string
      */
-    protected string $apiTagUrl = 'https://api.stackexchange.com/2.2/questions?site=stackoverflow&filter=withbody&order=asc';
+    protected string $fileWithTimestampOfLastExecution = 'last_execution.txt';
 
     /**
      * @var array
@@ -127,11 +125,19 @@ class PostNewQuestions
      */
     public function getNewestPostsInStackOverflow(string $tag): ?array
     {
-        $lastExecution = time() - 24 * 3600;
+        $lastExecution = (int)file_get_contents($this->fileWithTimestampOfLastExecution) ?: time() - 24 * 3600;
         $taggedQuestionsUrl = $this->apiTagUrl . '&tagged=' . $tag . '&key=' . $this->stackAppsKey . '&fromdate=' . $lastExecution;
         $questions = file_get_contents('compress.zlib://' . $taggedQuestionsUrl);
 
         return json_decode($questions, true);
+    }
+
+    /**
+     * @return void
+     */
+    public function setNewTimestamp(): void
+    {
+        file_put_contents($this->fileWithTimestampOfLastExecution, time());
     }
 }
 
@@ -143,4 +149,8 @@ foreach ($tags as $tag) {
     $newestQuestions = $newPostService->getNewestPostsInStackOverflow($tag);
     $postData = $newPostService->convertQuestionToSlackData($tag, $newestQuestions);
     $newPostService->sendPostToSlack($tag, $postData);
+}
+
+if (!empty($postData)) {
+    $newPostService->setNewTimestamp();
 }

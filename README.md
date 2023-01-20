@@ -12,3 +12,12 @@ StackOverflow (with special tags) and put it as message into Slack channels.
 5. Use example file and save it into webhooks.ini
 6. Add webhooks to webhooks.ini file
 
+## Testing
+
+1. Download
+2. Run
+   ```
+   composer install
+   ./vendor/bin/phpunit
+   ```
+   

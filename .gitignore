@@ -2,3 +2,5 @@
 last_execution.txt
 key.txt
 webhooks.ini
+/vendor/
+/.phpunit.result.cache

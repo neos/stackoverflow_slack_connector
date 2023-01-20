@@ -26,7 +26,7 @@ class Connector
     /**
      * @var string
      */
-    protected string $apiTagUrl = 'https://api.stackexchange.com/2.2/questions?site=stackoverflow&filter=withbody&order=asc';
+    protected string $apiTagUrl = 'https://api.stackexchange.com/2.3/questions?site=stackoverflow&filter=withbody&order=asc';
 
     /**
      * @var string

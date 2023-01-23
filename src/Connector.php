@@ -29,11 +29,6 @@ class Connector
     protected string $apiTagUrl = 'https://api.stackexchange.com/2.3/questions?site=stackoverflow&filter=withbody&order=asc';
 
     /**
-     * @var string
-     */
-    protected string $fileWithTimestampOfLastExecution = 'last_execution.txt';
-
-    /**
      * @var array
      */
     protected array $webhooks = [];
@@ -43,7 +38,15 @@ class Connector
      */
     public function setStackAppsKey()
     {
-        $this->stackAppsKey = str_replace("\n", '', file_get_contents(getenv('keyfile')));
+        $this->stackAppsKey = str_replace("\n", '', file_get_contents($this->getStackAppsKeyFilename()));
+    }
+
+    /**
+     * @return string
+     */
+    protected function getStackAppsKeyFilename(): string
+    {
+        return getenv('keyfile') ?? 'key.txt';
     }
 
     /**
@@ -51,7 +54,7 @@ class Connector
      */
     public function getMainTags()
     {
-        return array_keys(parse_ini_file(getenv('hooksfile'), true));
+        return array_keys(parse_ini_file($this->getWebHooksFilename(), true));
     }
 
     /**
@@ -59,7 +62,12 @@ class Connector
      */
     public function setWebHookUrls()
     {
-        $this->webhooks = parse_ini_file(getenv('hooksfile'), true);
+        $this->webhooks = parse_ini_file($this->getWebHooksFilename(), true);
+    }
+
+    protected function getWebHooksFilename(): string
+    {
+        return getenv('hooksfile') ?? 'webhooks.ini';
     }
 
     /**
@@ -125,7 +133,7 @@ class Connector
      */
     public function getNewestPostsInStackOverflow(string $tag): ?array
     {
-        $lastExecution = (int)file_get_contents($this->fileWithTimestampOfLastExecution) ?: time() - 24 * 3600;
+        $lastExecution = (int)file_get_contents($this->getTimestampFilename()) ?: time() - 24 * 3600;
         $taggedQuestionsUrl = $this->apiTagUrl . '&tagged=' . $tag . '&key=' . $this->stackAppsKey . '&fromdate=' . $lastExecution;
         $questions = file_get_contents('compress.zlib://' . $taggedQuestionsUrl);
 
@@ -137,6 +145,15 @@ class Connector
      */
     public function setNewTimestamp(): void
     {
-        file_put_contents($this->fileWithTimestampOfLastExecution, time());
+        file_put_contents($this->getTimestampFilename(), time());
     }
+
+    /**
+     * @return string
+     */
+    protected function getTimestampFilename(): string
+    {
+        return getenv('timestampfile') ?? 'last_execution.txt';
+    }
+
 }

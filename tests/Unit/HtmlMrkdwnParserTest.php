@@ -1,17 +1,14 @@
 <?php
 declare(strict_types=1);
 
-namespace StackoverflowSlackConnector\Tests;
+namespace StackoverflowSlackConnectorTests\Unit;
 
-use PHPUnit\Framework\TestCase;
 use StackoverflowSlackConnector\HtmlMrkdwnParser;
+use StackoverflowSlackConnectorTests\AbstractTestCase;
 
-final class HtmlMrkdwnParserTest extends TestCase
+final class HtmlMrkdwnParserTest extends AbstractTestCase
 {
-    /**
-     * @return void
-     */
-    public function testParse()
+    public function testParse(): void
     {
         $stackOverflowQuestionBody = <<<'NOWDOC'
 <p>Is the document tree cached in the Neos CMS backend? I have created two pages under &quot;Home&quot;: &quot;Neos CMS&quot; and &quot;Blog&quot; and they are displayed correctly in the main menu of the page preview, but when I click on one of the two page nodes in the document tree, the &quot;Blog&quot; node disappears in the document tree. Only when I click on the &quot;Home&quot; node or the tree refresh button, the &quot;Blog&quot; node temporarily reappears. When flushing the cache via CLI command <code>./flow flow:cache:flush</code> the node becomes permanently visible.</p>

@@ -6,18 +6,33 @@ StackOverflow (with special tags) and put it as message into Slack channels.
 ## Installation
 
 1. Download
-2. Setup private key from StackExchange API (https://api.stackexchange.com/)
-3. Save key to key.txt file
-4. Setup webhooks in Slack
-5. Use example file and save it into webhooks.ini
-6. Add webhooks to webhooks.ini file
+2. Set up a [webhook](https://api.slack.com/messaging/webhooks) for a Slack channel of
+   your choice and take note of the webhook URL.
+3. Copy the webhooks-example.ini file to webhooks.ini.
+4. Paste the webhook URL into the webhooks.ini file.
+5. Optionally, register an app with [Stack App] (https://stackapps.com/apps/oauth/register),
+   note the app key, and save it to the key.txt file to bypass StackOverflow API rate limitations.
 
 ## Testing
+
+### Unit Tests
 
 1. Download
 2. Run
    ```
    composer install
-   ./vendor/bin/phpunit
+   ./vendor/bin/phpunit --testsuite unit
    ```
-   
+
+### End-to-End Tests
+
+1. Download
+2. Set up a [webhook](https://api.slack.com/messaging/webhooks) for a Slack channel of 
+   your choice and take note of the webhook URL.
+3. Run
+   ```
+   composer install
+   SLACK_WEBHOOK_URL="<webhook-url>" ./vendor/bin/phpunit --testsuite end-to-end
+   ```
+4. Confirm that the StackOverflow question "Neos CMS 7: Newly created node disappears 
+   in the document tree until cache cleared" has appeared in your Slack channel.

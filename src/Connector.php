@@ -26,7 +26,7 @@ class Connector
     /**
      * @var string
      */
-    protected string $stackExchangeApiUrl = 'https://api.stackexchange.com/2.3/';
+    protected string $stackExchangeApiUrl = 'https://api.stackexchange.com/2.3';
 
     /**
      * @var array
@@ -36,9 +36,9 @@ class Connector
     /**
      * @return void
      */
-    public function loadStackAppsKey()
+    public function loadStackAppsKeyIfAvailable()
     {
-        $this->stackAppsKey = str_replace("\n", '', file_get_contents($this->getStackAppsKeyFilename()));
+        $this->stackAppsKey = str_replace("\n", '', @file_get_contents($this->getStackAppsKeyFilename()));
     }
 
     /**
@@ -52,15 +52,15 @@ class Connector
     /**
      * @return void
      */
-    public function loadSlackWebHookUrls()
+    public function loadSlackWebhookUrls()
     {
-        $this->slackWebhookUrls = parse_ini_file($this->getSlackWebHookUrlsFilename(), true);
+        $this->slackWebhookUrls = parse_ini_file($this->getSlackWebhookUrlsFilename(), true);
     }
 
     /**
      * @return string
      */
-    protected function getSlackWebHookUrlsFilename(): string
+    protected function getSlackWebhookUrlsFilename(): string
     {
         return getenv('hooksfile') ?: 'webhooks.ini';
     }
@@ -71,25 +71,35 @@ class Connector
     public function getMainTags()
     {
         if (empty($this->slackWebhookUrls)) {
-            $this->loadSlackWebHookUrls();
+            $this->loadSlackWebhookUrls();
         }
         return array_keys($this->slackWebhookUrls);
     }
 
     /**
      * @param string $tag
+     * @param int $fromDate
+     * @param int $toDate
      * @return array|null
+     *
+     * @see https://api.stackexchange.com/docs/questions
      */
-    public function fetchLatestQuestionsFromStackOverflow(string $tag): ?array
+    public function fetchLatestQuestionsFromStackOverflow(string $tag, int $fromDate = -1, int $toDate = -1): ?array
     {
-        $questionsUrl = $this->stackExchangeApiUrl . '/questions?' . http_build_query([
+        $questionsUrlQuery = [
             'site' => 'stackoverflow',
             'filter' => 'withbody',
             'order' => 'asc',
             'tagged' => $tag,
-            'key' => $this->stackAppsKey,
-            'fromdate' => $this->getLastExecution() ?: time() - 24 * 3600
-        ]);
+            'fromdate' => $fromDate > -1 ? $fromDate : ($this->getLastExecution() ?: time() - 24 * 3600)
+        ];
+        if ($toDate > -1) {
+            $questionsUrlQuery['todate'] = $toDate;
+        }
+        if (!empty($this->stackAppsKey)) {
+            $questionsUrlQuery['key'] = $this->stackAppsKey;
+        }
+        $questionsUrl = $this->stackExchangeApiUrl . '/questions?' . http_build_query($questionsUrlQuery);
         $questions = file_get_contents('compress.zlib://' . $questionsUrl);
 
         return json_decode($questions, true);
@@ -99,6 +109,8 @@ class Connector
      * @param array $questions
      * @param string $mainTag
      * @return array
+     *
+     * @see https://api.slack.com/reference/messaging/attachments
      */
     public function convertQuestionsToSlackMessages(array $questions, string $mainTag): array
     {
@@ -135,6 +147,8 @@ class Connector
      * @param array $messages
      * @param string $mainTag
      * @return void
+     *
+     * @see https://api.slack.com/messaging/webhooks
      */
     public function sendMessagesToSlack(array $messages, string $mainTag): void
     {

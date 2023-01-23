@@ -46,7 +46,7 @@ class Connector
      */
     protected function getStackAppsKeyFilename(): string
     {
-        return getenv('keyfile') ?? 'key.txt';
+        return getenv('keyfile') ?: 'key.txt';
     }
 
     /**
@@ -62,7 +62,7 @@ class Connector
      */
     protected function getSlackWebHookUrlsFilename(): string
     {
-        return getenv('hooksfile') ?? 'webhooks.ini';
+        return getenv('hooksfile') ?: 'webhooks.ini';
     }
 
     /**
@@ -173,6 +173,6 @@ class Connector
      */
     protected function getLastExecutionFilename(): string
     {
-        return getenv('lastexecutionfile') ?? 'last_execution.txt';
+        return getenv('lastexecutionfile') ?: 'last_execution.txt';
     }
 }

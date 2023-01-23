@@ -17,13 +17,13 @@ class HtmlMrkdwnParser
                 '#<h[123456]>(.*?)</h[123456]>#s' => function ($match) {
                     return sprintf("*%s*\n", $match[1]);
                 },
-                '#<a[^>]*href="([^"]*)"[^>]*>([^<]*)</a>#' => function ($match) {
+                '#<a[^>]*href="([^"]*)"[^>]*>(.*?)</a>#s' => function ($match) {
                     return sprintf("<%s|%s>", $match[1], $match[2]);
                 },
-                '#<div[^>]*class="snippet"[^>]*>\s*<div[^>]*>\s*<pre[^>]*>\s*<code[^>]*>([^<]*)</code>\s*</pre>\s*</div>\s*</div>#' => function ($match) {
+                '#<div[^>]*class="snippet"[^>]*>\s*<div[^>]*>\s*<pre[^>]*>\s*<code[^>]*>(.*?)</code>\s*</pre>\s*</div>\s*</div>#s' => function ($match) {
                     return sprintf("```\n%s\n```\n", trim($match[1]));
                 },
-                '#<pre[^>]*>\s*<code[^>]*>([^<]*)</code>\s*</pre>#' => function ($match) {
+                '#<pre[^>]*>\s*<code[^>]*>(.*?)</code>\s*</pre>#s' => function ($match) {
                     return sprintf("```\n%s\n```\n", trim($match[1]));
                 },
                 '#<ol[^>]*>(.*?)</ol>#s' => function ($match) {

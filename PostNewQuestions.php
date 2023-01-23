@@ -21,15 +21,15 @@ require 'src/Connector.php';
 require 'src/HtmlMrkdwnParser.php';
 
 $connector = new Connector();
-$connector->setStackAppsKey();
-$connector->setWebHookUrls();
-$tags = $connector->getMainTags();
-foreach ($tags as $tag) {
-    $newestQuestions = $connector->getNewestPostsInStackOverflow($tag);
-    $postData = $connector->convertQuestionToSlackData($tag, $newestQuestions);
-    $connector->sendPostToSlack($tag, $postData);
+$connector->loadStackAppsKey();
+$connector->loadSlackWebHookUrls();
+$mainTags = $connector->getMainTags();
+foreach ($mainTags as $mainTag) {
+    $questions = $connector->fetchLatestQuestionsFromStackOverflow($mainTag);
+    $messages = $connector->convertQuestionsToSlackMessages($questions, $mainTag);
+    $connector->sendMessagesToSlack($messages, $mainTag);
 }
 
-if (!empty($postData)) {
-    $connector->setNewTimestamp();
+if (!empty($messages)) {
+    $connector->updateLastExecution();
 }

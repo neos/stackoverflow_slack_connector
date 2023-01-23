@@ -26,17 +26,17 @@ class Connector
     /**
      * @var string
      */
-    protected string $apiTagUrl = 'https://api.stackexchange.com/2.3/questions?site=stackoverflow&filter=withbody&order=asc';
+    protected string $stackExchangeApiUrl = 'https://api.stackexchange.com/2.3/';
 
     /**
      * @var array
      */
-    protected array $webhooks = [];
+    protected array $slackWebhookUrls = [];
 
     /**
      * @return void
      */
-    public function setStackAppsKey()
+    public function loadStackAppsKey()
     {
         $this->stackAppsKey = str_replace("\n", '', file_get_contents($this->getStackAppsKeyFilename()));
     }
@@ -50,36 +50,61 @@ class Connector
     }
 
     /**
-     * @return array
+     * @return void
      */
-    public function getMainTags()
+    public function loadSlackWebHookUrls()
     {
-        return array_keys(parse_ini_file($this->getWebHooksFilename(), true));
+        $this->slackWebhookUrls = parse_ini_file($this->getSlackWebHookUrlsFilename(), true);
     }
 
     /**
-     * @return void
+     * @return string
      */
-    public function setWebHookUrls()
-    {
-        $this->webhooks = parse_ini_file($this->getWebHooksFilename(), true);
-    }
-
-    protected function getWebHooksFilename(): string
+    protected function getSlackWebHookUrlsFilename(): string
     {
         return getenv('hooksfile') ?? 'webhooks.ini';
     }
 
     /**
-     * @param string $mainTag
-     * @param array $data
      * @return array
      */
-    public function convertQuestionToSlackData(string $mainTag, array $data): array
+    public function getMainTags()
     {
-        $postData = [];
-        foreach ($data['items'] as $question) {
-            $attachment = [
+        if (empty($this->slackWebhookUrls)) {
+            $this->loadSlackWebHookUrls();
+        }
+        return array_keys($this->slackWebhookUrls);
+    }
+
+    /**
+     * @param string $tag
+     * @return array|null
+     */
+    public function fetchLatestQuestionsFromStackOverflow(string $tag): ?array
+    {
+        $questionsUrl = $this->stackExchangeApiUrl . '/questions?' . http_build_query([
+            'site' => 'stackoverflow',
+            'filter' => 'withbody',
+            'order' => 'asc',
+            'tagged' => $tag,
+            'key' => $this->stackAppsKey,
+            'fromdate' => $this->getLastExecution() ?: time() - 24 * 3600
+        ]);
+        $questions = file_get_contents('compress.zlib://' . $questionsUrl);
+
+        return json_decode($questions, true);
+    }
+
+    /**
+     * @param array $questions
+     * @param string $mainTag
+     * @return array
+     */
+    public function convertQuestionsToSlackMessages(array $questions, string $mainTag): array
+    {
+        $messages = [];
+        foreach ($questions['items'] as $question) {
+            $message = [
                 'attachments' => [
                     [
                         'fallback' => 'New question in StackOverflow: ' . $question['title'],
@@ -97,28 +122,28 @@ class Connector
                 ]
             ];
             foreach ($question['tags'] as $tag) {
-                if (array_key_exists($tag, $this->webhooks[$mainTag])) {
-                    $postData[$tag][$question['question_id']] = $attachment;
+                if (array_key_exists($tag, $this->slackWebhookUrls[$mainTag])) {
+                    $messages[$tag][$question['question_id']] = $message;
                 }
             }
         }
 
-        return $postData;
+        return $messages;
     }
 
     /**
+     * @param array $messages
      * @param string $mainTag
-     * @param array $data
      * @return void
      */
-    public function sendPostToSlack(string $mainTag, array $data): void
+    public function sendMessagesToSlack(array $messages, string $mainTag): void
     {
-        foreach ($data as $tag => $postData) {
-            foreach ($postData as $post) {
+        foreach ($messages as $tag => $messagesByTag) {
+            foreach ($messagesByTag as $message) {
                 $curlHandler = curl_init();
-                curl_setopt($curlHandler, CURLOPT_URL, $this->webhooks[$mainTag][$tag]);
-                curl_setopt($curlHandler, CURLOPT_POST, count($post));
-                curl_setopt($curlHandler, CURLOPT_POSTFIELDS, json_encode($post));
+                curl_setopt($curlHandler, CURLOPT_URL, $this->slackWebhookUrls[$mainTag][$tag]);
+                curl_setopt($curlHandler, CURLOPT_POST, count($message));
+                curl_setopt($curlHandler, CURLOPT_POSTFIELDS, json_encode($message));
 
                 curl_exec($curlHandler);
 
@@ -128,32 +153,26 @@ class Connector
     }
 
     /**
-     * @param string $tag
-     * @return array|null
+     * @return int
      */
-    public function getNewestPostsInStackOverflow(string $tag): ?array
+    protected function getLastExecution(): int
     {
-        $lastExecution = (int)file_get_contents($this->getTimestampFilename()) ?: time() - 24 * 3600;
-        $taggedQuestionsUrl = $this->apiTagUrl . '&tagged=' . $tag . '&key=' . $this->stackAppsKey . '&fromdate=' . $lastExecution;
-        $questions = file_get_contents('compress.zlib://' . $taggedQuestionsUrl);
-
-        return json_decode($questions, true);
+        return (int)@file_get_contents($this->getLastExecutionFilename());
     }
 
     /**
      * @return void
      */
-    public function setNewTimestamp(): void
+    public function updateLastExecution(): void
     {
-        file_put_contents($this->getTimestampFilename(), time());
+        file_put_contents($this->getLastExecutionFilename(), time());
     }
 
     /**
      * @return string
      */
-    protected function getTimestampFilename(): string
+    protected function getLastExecutionFilename(): string
     {
-        return getenv('timestampfile') ?? 'last_execution.txt';
+        return getenv('lastexecutionfile') ?? 'last_execution.txt';
     }
-
 }

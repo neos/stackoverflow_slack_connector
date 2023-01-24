@@ -152,12 +152,10 @@ HEREDOC);
             );
             $messages = $connector->convertQuestionsToSlackMessages($questions, $mainTag);
             $connector->sendMessagesToSlack($messages, $mainTag);
+            $expected = $this->getConvertQuestionsToSlackMessagesExpectation();
+            $this->assertEquals($expected, $messages);
         }
-        if (!empty($messages)) {
-            $connector->updateLastExecution();
-        }
-        $expected = $this->getConvertQuestionsToSlackMessagesExpectation();
-        $this->assertEquals($expected, $messages);
+        $connector->updateLastExecution();
         $this->assertFileExists($this->getPathOfTestDirectoryFile('last_execution.txt'));
         // You should have received the StackOverflow question
         // "Neos CMS 7: Newly created node disappears in the document tree until cache cleared"

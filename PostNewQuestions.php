@@ -29,6 +29,4 @@ foreach ($mainTags as $mainTag) {
     $messages = $connector->convertQuestionsToSlackMessages($questions, $mainTag);
     $connector->sendMessagesToSlack($messages, $mainTag);
 }
-if (!empty($messages)) {
-    $connector->updateLastExecution();
-}
+$connector->updateLastExecution();

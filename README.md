@@ -10,7 +10,7 @@ StackOverflow (with special tags) and put it as message into Slack channels.
    your choice and take note of the webhook URL.
 3. Copy the webhooks-example.ini file to webhooks.ini.
 4. Paste the webhook URL into the webhooks.ini file.
-5. Optionally, register an app with [Stack App] (https://stackapps.com/apps/oauth/register),
+5. Optionally, register an app with [Stack App](https://stackapps.com/apps/oauth/register),
    note the app key, and save it to the key.txt file to bypass StackOverflow API rate limitations.
 
 ## Testing
@@ -36,7 +36,7 @@ StackOverflow (with special tags) and put it as message into Slack channels.
    ```
 4. Confirm that the StackOverflow question "Neos CMS 7: Newly created node disappears 
    in the document tree until cache cleared" has appeared in your Slack channel.
-5. Optionally, register an app with [Stack App] (https://stackapps.com/apps/oauth/register),
+5. Optionally, register an app with [Stack App](https://stackapps.com/apps/oauth/register),
    note the app key, and run
    ```
    composer install

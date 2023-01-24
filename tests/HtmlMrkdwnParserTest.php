@@ -1,13 +1,15 @@
 <?php
 declare(strict_types=1);
 
-namespace StackoverflowSlackConnectorTests\Unit;
+namespace StackoverflowSlackConnectorTests;
 
 use StackoverflowSlackConnector\HtmlMrkdwnParser;
-use StackoverflowSlackConnectorTests\AbstractTestCase;
 
 final class HtmlMrkdwnParserTest extends AbstractTestCase
 {
+    /**
+     * @group unit
+     */
     public function testParse(): void
     {
         $stackOverflowQuestionBody = <<<'NOWDOC'

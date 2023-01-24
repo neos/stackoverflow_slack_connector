@@ -21,7 +21,7 @@ StackOverflow (with special tags) and put it as message into Slack channels.
 2. Run
    ```
    composer install
-   ./vendor/bin/phpunit --testsuite unit
+   ./vendor/bin/phpunit --group unit
    ```
 
 ### End-to-End Tests
@@ -32,7 +32,14 @@ StackOverflow (with special tags) and put it as message into Slack channels.
 3. Run
    ```
    composer install
-   SLACK_WEBHOOK_URL="<webhook-url>" ./vendor/bin/phpunit --testsuite end-to-end
+   SLACK_WEBHOOK_URL="<webhook-url>" ./vendor/bin/phpunit --group end-to-end
    ```
 4. Confirm that the StackOverflow question "Neos CMS 7: Newly created node disappears 
    in the document tree until cache cleared" has appeared in your Slack channel.
+5. Optionally, register an app with [Stack App] (https://stackapps.com/apps/oauth/register),
+   note the app key, and run
+   ```
+   composer install
+   SLACK_WEBHOOK_URL="<webhook-url>" STACK_APPS_KEY="<app-key>" ./vendor/bin/phpunit --group end-to-end
+   ```
+   to bypass StackOverflow API rate limitations.

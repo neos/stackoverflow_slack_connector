@@ -124,6 +124,7 @@ class Connector
                         'title_link' => $question['link'],
                         'thumb_url' => $question['owner']['profile_image'] ?? '',
                         'text' => (new HtmlMrkdwnParser())->parse($question['body']),
+                        'color' => '#F2740D',
                         'fields' => [
                             [
                                 'title' => 'Tags',

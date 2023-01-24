@@ -98,6 +98,7 @@ I used the <https://github.com/code-q-web-factory/Neos-Skeleton|CodeQ Skeleton> 
 
 I can provide a bash script that builds up a Neos instance for repeating reproduction of this behaviour.
 NOWDOC,
+                            'color' => '#F2740D',
                             'fields' => [
                                 [
                                     'title' => 'Tags',

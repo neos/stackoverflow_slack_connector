@@ -34,45 +34,39 @@ class Connector
     protected array $slackWebhookUrls = [];
 
     /**
-     * @return void
+     * @var string
      */
-    public function loadStackAppsKeyIfAvailable()
+    protected string $lastExecutionFilename = 'last_execution.txt';
+
+    /**
+     * @param string $stackAppsKey
+     */
+    public function setStackAppsKey(string $stackAppsKey): void
     {
-        $this->stackAppsKey = str_replace("\n", '', @file_get_contents($this->getStackAppsKeyFilename()));
+        $this->stackAppsKey = str_replace("\n", '', $stackAppsKey);
     }
 
     /**
-     * @return string
+     * @param array $slackWebhookUrls
      */
-    protected function getStackAppsKeyFilename(): string
+    public function setSlackWebhookUrls(array $slackWebhookUrls): void
     {
-        return getenv('keyfile') ?: 'key.txt';
+        $this->slackWebhookUrls = $slackWebhookUrls;
     }
 
     /**
-     * @return void
+     * @param string $lastExecutionFilename
      */
-    public function loadSlackWebhookUrls()
+    public function setLastExecutionFilename(string $lastExecutionFilename): void
     {
-        $this->slackWebhookUrls = parse_ini_file($this->getSlackWebhookUrlsFilename(), true);
-    }
-
-    /**
-     * @return string
-     */
-    protected function getSlackWebhookUrlsFilename(): string
-    {
-        return getenv('hooksfile') ?: 'webhooks.ini';
+        $this->lastExecutionFilename = $lastExecutionFilename;
     }
 
     /**
      * @return array
      */
-    public function getMainTags()
+    public function getMainTags(): array
     {
-        if (empty($this->slackWebhookUrls)) {
-            $this->loadSlackWebhookUrls();
-        }
         return array_keys($this->slackWebhookUrls);
     }
 
@@ -84,15 +78,17 @@ class Connector
      *
      * @see https://api.stackexchange.com/docs/questions
      */
-    public function fetchLatestQuestionsFromStackOverflow(string $tag, int $fromDate = -1, int $toDate = -1): ?array
+    public function fetchQuestionsFromStackOverflow(string $tag, int $fromDate = -1, int $toDate = -1): ?array
     {
         $questionsUrlQuery = [
             'site' => 'stackoverflow',
             'filter' => 'withbody',
             'order' => 'asc',
             'tagged' => $tag,
-            'fromdate' => $fromDate > -1 ? $fromDate : ($this->getLastExecution() ?: time() - 24 * 3600)
         ];
+        if ($fromDate > -1) {
+            $questionsUrlQuery['fromdate'] = $fromDate;
+        }
         if ($toDate > -1) {
             $questionsUrlQuery['todate'] = $toDate;
         }
@@ -170,9 +166,9 @@ class Connector
     /**
      * @return int
      */
-    protected function getLastExecution(): int
+    public function getLastExecution(): int
     {
-        return (int)@file_get_contents($this->getLastExecutionFilename());
+        return (int)@file_get_contents($this->lastExecutionFilename);
     }
 
     /**
@@ -180,14 +176,6 @@ class Connector
      */
     public function updateLastExecution(): void
     {
-        file_put_contents($this->getLastExecutionFilename(), time());
-    }
-
-    /**
-     * @return string
-     */
-    protected function getLastExecutionFilename(): string
-    {
-        return getenv('lastexecutionfile') ?: 'last_execution.txt';
+        file_put_contents($this->lastExecutionFilename, time());
     }
 }

@@ -15,7 +15,6 @@ final class ConnectorTest extends AbstractTestCase
     protected function tearDown(): void
     {
         $this->removeTestDirectory();
-        $this->clearEnvVars();
     }
 
     /**
@@ -23,15 +22,13 @@ final class ConnectorTest extends AbstractTestCase
      */
     public function testConvertQuestionsToSlackMessages(): void
     {
-        $this->addFileToTestDirectory('webhooks.ini', <<<'NOWDOC'
-[neoscms]
-    neoscms = https://hooks.slack.com/services/segment1/segment2/segment3
-NOWDOC);
-        $this->setEnvVar('hooksfile', $this->getPathOfTestDirectoryFile('webhooks.ini'));
-
         $connector = new Connector();
-        $connector->loadSlackWebhookUrls();
-        $questions = $this->getFetchLatestQuestionsFromStackOverflowFixture();
+        $connector->setSlackWebhookUrls([
+            'neoscms' => [
+                'neoscms' => 'https://hooks.slack.com/services/segment1/segment2/segment3'
+            ]
+        ]);
+        $questions = $this->getFetchQuestionsFromStackOverflowFixture();
         $actual = $connector->convertQuestionsToSlackMessages($questions, 'neoscms');
         $expected = $this->getConvertQuestionsToSlackMessagesExpectation();
         $this->assertEquals($expected, $actual);
@@ -40,7 +37,7 @@ NOWDOC);
     /**
      * Fetched with https://api.stackexchange.com/2.3/questions?site=stackoverflow&filter=withbody&order=asc&tagged=neoscms&fromdate=1674086400&todate=1674172800.
      */
-    private function getFetchLatestQuestionsFromStackOverflowFixture(): array
+    private function getFetchQuestionsFromStackOverflowFixture(): array
     {
         return json_decode(<<<'NOWDOC'
 {
@@ -117,8 +114,9 @@ NOWDOC,
      */
     public function testEndToEnd(): void
     {
-        $slackWebhookUrl = getenv('SLACK_WEBHOOK_URL');
-        $stackAppsKey = getenv('STACK_APPS_KEY');
+        $slackWebhookUrl = getenv('SLACK_WEBHOOK_URL') ?: '';
+        $stackAppsKey = getenv('STACK_APPS_KEY') ?: '';
+        $lastExecutionFilename = $this->getPathOfTestDirectoryFile('last_execution.txt');
 
         $this->assertNotEmpty(
             $slackWebhookUrl,
@@ -129,35 +127,28 @@ SLACK_WEBHOOK_URL="https://hooks.slack.com/services/segment1/segment2/segment3" 
 ----------
 Visit https://api.slack.com/messaging/webhooks to learn how to set up a webhook for your own Slack workspace.
 NOWDOC);
-
-        $this->addFileToTestDirectory('webhooks.ini', <<<HEREDOC
-[neoscms]
-    neoscms = $slackWebhookUrl
-HEREDOC);
-        $this->setEnvVar('hooksfile', $this->getPathOfTestDirectoryFile('webhooks.ini'));
-        $this->setEnvVar('lastexecutionfile', $this->getPathOfTestDirectoryFile('last_execution.txt'));
-        if (!empty($stackAppsKey)) {
-            $this->addFileToTestDirectory('key.txt', $stackAppsKey);
-            $this->setEnvVar('keyfile', $this->getPathOfTestDirectoryFile('key.txt'));
-        }
+        $this->assertFileDoesNotExist($lastExecutionFilename);
 
         $connector = new Connector();
-        $connector->loadStackAppsKeyIfAvailable();
-        $connector->loadSlackWebhookUrls();
+        $connector->setStackAppsKey($stackAppsKey);
+        $connector->setSlackWebhookUrls([
+            'neoscms' => [
+                'neoscms' => $slackWebhookUrl
+            ]
+        ]);
+        $connector->setLastExecutionFilename($lastExecutionFilename);
         $mainTags = $connector->getMainTags();
+        $fromDate = strtotime('19 January 2023');
+        $toDate = strtotime('20 January 2023');
         foreach ($mainTags as $mainTag) {
-            $questions = $connector->fetchLatestQuestionsFromStackOverflow(
-                $mainTag,
-                strtotime('19 January 2023'),
-                strtotime('20 January 2023')
-            );
+            $questions = $connector->fetchQuestionsFromStackOverflow($mainTag, $fromDate, $toDate);
             $messages = $connector->convertQuestionsToSlackMessages($questions, $mainTag);
             $connector->sendMessagesToSlack($messages, $mainTag);
             $expected = $this->getConvertQuestionsToSlackMessagesExpectation();
             $this->assertEquals($expected, $messages);
         }
         $connector->updateLastExecution();
-        $this->assertFileExists($this->getPathOfTestDirectoryFile('last_execution.txt'));
+        $this->assertFileExists($lastExecutionFilename);
         // You should have received the StackOverflow question
         // "Neos CMS 7: Newly created node disappears in the document tree until cache cleared"
         // in your Slack channel.

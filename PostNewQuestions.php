@@ -20,12 +20,18 @@ use StackoverflowSlackConnector\Connector;
 require 'src/Connector.php';
 require 'src/HtmlMrkdwnParser.php';
 
+$slackWebhookUrlsFilename = getenv('hooksfile') ?: 'webhooks.ini';
+$stackAppsKeyFilename = getenv('keyfile') ?: 'key.txt';
+$lastExecutionFilename = getenv('lastexecutionfile') ?: 'last_execution.txt';
+
 $connector = new Connector();
-$connector->loadStackAppsKeyIfAvailable();
-$connector->loadSlackWebhookUrls();
+$connector->setSlackWebhookUrls(parse_ini_file($slackWebhookUrlsFilename, true));
+$connector->setStackAppsKey(@file_get_contents($stackAppsKeyFilename) ?: '');
+$connector->setLastExecutionFilename($lastExecutionFilename);
 $mainTags = $connector->getMainTags();
+$fromDate = $connector->getLastExecution() ?: time() - 24 * 3600;
 foreach ($mainTags as $mainTag) {
-    $questions = $connector->fetchLatestQuestionsFromStackOverflow($mainTag);
+    $questions = $connector->fetchQuestionsFromStackOverflow($mainTag, $fromDate);
     $messages = $connector->convertQuestionsToSlackMessages($questions, $mainTag);
     $connector->sendMessagesToSlack($messages, $mainTag);
 }

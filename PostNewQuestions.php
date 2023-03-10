@@ -21,11 +21,13 @@ require 'src/Connector.php';
 require 'src/HtmlMrkdwnParser.php';
 
 $slackWebhookUrlsFilename = getenv('hooksfile') ?: 'webhooks.ini';
+$slackMessageStructure = getenv('messagestructure') ?: Connector::SLACK_MESSAGE_STRUCTURE_BLOCK;
 $stackAppsKeyFilename = getenv('keyfile') ?: 'key.txt';
 $lastExecutionFilename = getenv('lastexecutionfile') ?: 'last_execution.txt';
 
 $connector = new Connector();
 $connector->setSlackWebhookUrls(parse_ini_file($slackWebhookUrlsFilename, true));
+$connector->setSlackMessageStructure($slackMessageStructure);
 $connector->setStackAppsKey(@file_get_contents($stackAppsKeyFilename) ?: '');
 $connector->setLastExecutionFilename($lastExecutionFilename);
 $mainTags = $connector->getMainTags();

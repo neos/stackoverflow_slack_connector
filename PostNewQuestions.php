@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * This file was part of the TYPO3 CMS project. It has been forked and
  * adjusted for Neos.
@@ -11,146 +13,28 @@
  * LICENSE.txt file that was distributed with this source code.
  */
 
-class PostNewQuestions
-{
+use StackoverflowSlackConnector\Connector;
 
-    /**
-     * @var string
-     */
-    protected string $stackAppsKey = '';
+// At the moment, we refrain from using Composer in production and
+// therefore load the classes manually.
+require 'src/Connector.php';
+require 'src/HtmlMrkdwnParser.php';
 
-    /**
-     * @var string
-     */
-    protected string $apiTagUrl = 'https://api.stackexchange.com/2.2/questions?site=stackoverflow&filter=withbody&order=asc';
+$slackWebhookUrlsFilename = getenv('hooksfile') ?: 'webhooks.ini';
+$slackMessageStructure = getenv('messagestructure') ?: Connector::SLACK_MESSAGE_STRUCTURE_BLOCK;
+$stackAppsKeyFilename = getenv('keyfile') ?: 'key.txt';
+$lastExecutionFilename = getenv('lastexecutionfile') ?: 'last_execution.txt';
 
-    /**
-     * @var string
-     */
-    protected string $fileWithTimestampOfLastExecution = 'last_execution.txt';
-
-    /**
-     * @var array
-     */
-    protected array $webhooks = [];
-
-    /**
-     * @return void
-     */
-    public function setStackAppsKey()
-    {
-        $this->stackAppsKey = str_replace("\n", '', file_get_contents(getenv('keyfile')));
-    }
-
-    /**
-     * @return array
-     */
-    public function getMainTags()
-    {
-        return array_keys(parse_ini_file(getenv('hooksfile'), true));
-    }
-
-    /**
-     * @return void
-     */
-    public function setWebHookUrls()
-    {
-        $this->webhooks = parse_ini_file(getenv('hooksfile'), true);
-    }
-
-    /**
-     * @param string $mainTag
-     * @param array $data
-     * @return array
-     */
-    public function convertQuestionToSlackData(string $mainTag, array $data): array
-    {
-        $postData = [];
-        foreach ($data['items'] as $question) {
-            $attachment = [
-                'attachments' => [
-                    [
-                        'fallback' => 'New question in StackOverflow: ' . $question['title'],
-                        'title' => $question['title'],
-                        'title_link' => $question['link'],
-                        'thumb_url' => $question['owner']['profile_image'] ?? '',
-                        'text' => str_replace(
-                            ['&', '<p>', '</p>', '<', '>'],
-                            ['&amp;', '', '', '&lt;', '&gt;'],
-                            $question['body']
-                        ),
-                        'fields' => [
-                            [
-                                'title' => 'Tags',
-                                'value' => implode(', ', $question['tags'])
-                            ]
-                        ]
-                    ]
-                ]
-            ];
-            foreach ($question['tags'] as $tag) {
-                if (array_key_exists($tag, $this->webhooks[$mainTag])) {
-                    $postData[$tag][$question['question_id']] = $attachment;
-                }
-            }
-        }
-
-        return $postData;
-    }
-
-    /**
-     * @param string $mainTag
-     * @param array $data
-     * @return void
-     */
-    public function sendPostToSlack(string $mainTag, array $data): void
-    {
-        foreach ($data as $tag => $postData) {
-            foreach ($postData as $post) {
-                $curlHandler = curl_init();
-                curl_setopt($curlHandler, CURLOPT_URL, $this->webhooks[$mainTag][$tag]);
-                curl_setopt($curlHandler, CURLOPT_POST, count($post));
-                curl_setopt($curlHandler, CURLOPT_POSTFIELDS, json_encode($post));
-
-                curl_exec($curlHandler);
-
-                curl_close($curlHandler);
-            }
-        }
-    }
-
-    /**
-     * @param string $tag
-     * @return array|null
-     */
-    public function getNewestPostsInStackOverflow(string $tag): ?array
-    {
-        $lastExecution = (int)file_get_contents($this->fileWithTimestampOfLastExecution) ?: time() - 24 * 3600;
-        $taggedQuestionsUrl = $this->apiTagUrl . '&tagged=' . $tag . '&key=' . $this->stackAppsKey . '&fromdate=' . $lastExecution;
-        $questions = file_get_contents('compress.zlib://' . $taggedQuestionsUrl);
-
-        return json_decode($questions, true);
-    }
-
-    /**
-     * @return void
-     */
-    public function setNewTimestamp(): void
-    {
-        file_put_contents($this->fileWithTimestampOfLastExecution, time());
-    }
+$connector = new Connector();
+$connector->setSlackWebhookUrls(parse_ini_file($slackWebhookUrlsFilename, true));
+$connector->setSlackMessageStructure($slackMessageStructure);
+$connector->setStackAppsKey(@file_get_contents($stackAppsKeyFilename) ?: '');
+$connector->setLastExecutionFilename($lastExecutionFilename);
+$mainTags = $connector->getMainTags();
+$fromDate = $connector->getLastExecution() ?: time() - 24 * 3600;
+foreach ($mainTags as $mainTag) {
+    $questions = $connector->fetchQuestionsFromStackOverflow($mainTag, $fromDate);
+    $messages = $connector->convertQuestionsToSlackMessages($questions, $mainTag);
+    $connector->sendMessagesToSlack($messages, $mainTag);
 }
-
-$newPostService = new PostNewQuestions();
-$newPostService->setStackAppsKey();
-$newPostService->setWebHookUrls();
-$tags = $newPostService->getMainTags();
-foreach ($tags as $tag) {
-    $newestQuestions = $newPostService->getNewestPostsInStackOverflow($tag);
-    $postData = $newPostService->convertQuestionToSlackData($tag, $newestQuestions);
-    $newPostService->sendPostToSlack($tag, $postData);
-}
-
-if (!empty($postData)) {
-    $newPostService->setNewTimestamp();
-}
+$connector->updateLastExecution();

@@ -9,6 +9,8 @@ abstract class AbstractTestCase extends TestCase
 {
     protected array $usedEnvVars = [];
 
+    protected string $testDirectory = '';
+
     protected function setEnvVar($name, $value): void
     {
         putenv("$name=$value");
@@ -30,21 +32,22 @@ abstract class AbstractTestCase extends TestCase
         }
     }
 
-    protected function addFileToTestDirectory(string $filename, string $content): void
-    {
-        file_put_contents($this->getPathOfTestDirectoryFile($filename), $content);
-    }
-
-    protected function getPathOfTestDirectoryFile(string $filename): string
-    {
-        return $this->getTestDirectory() . '/' . $filename;
-    }
-
     protected function getTestDirectory(): string
     {
-        $inheritingClassFQCN = get_class($this);
-        $inheritingClassName = substr($inheritingClassFQCN, strrpos($inheritingClassFQCN, '\\') + 1);
-        return __DIR__ . '/' . $inheritingClassName;
+        if ($this->testDirectory === '') {
+            $inheritingClassFQCN = get_class($this);
+            $inheritingClassName = substr($inheritingClassFQCN, strrpos($inheritingClassFQCN, '\\') + 1);
+
+            try {
+                $inheritingClassDirectory = dirname((new \ReflectionClass($inheritingClassFQCN))->getFileName());
+            } catch (\ReflectionException $exception) {
+                $inheritingClassDirectory = __DIR__;
+            }
+
+            $this->testDirectory = $inheritingClassDirectory.'/'.$inheritingClassName;
+        }
+
+        return $this->testDirectory;
     }
 
     protected function removeTestDirectory(): void
@@ -58,5 +61,15 @@ abstract class AbstractTestCase extends TestCase
             }
             rmdir($this->getTestDirectory());
         }
+    }
+
+    protected function addFileToTestDirectory(string $filename, string $content): void
+    {
+        file_put_contents($this->getPathOfTestDirectoryFile($filename), $content);
+    }
+
+    protected function getPathOfTestDirectoryFile(string $filename): string
+    {
+        return $this->getTestDirectory() . '/' . $filename;
     }
 }

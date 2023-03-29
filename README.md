@@ -61,3 +61,15 @@ StackOverflow (with special tags) and put it as message into Slack channels.
    composer install
    SLACK_MESSAGE_STRUCTURE="<message-structure>" SLACK_WEBHOOK_URL="<webhook-url>" STACK_APPS_KEY="<app-key>" ./vendor/bin/phpunit --group end-to-end
    ```
+
+### Code coverage
+
+1. Download
+2. Enable Xdebug
+3. Run
+   ```
+   composer install
+   SLACK_WEBHOOK_URL="<webhook-url>" php -dxdebug.mode=coverage ./vendor/bin/phpunit --coverage-clover <coverage-file>
+   ```
+4. Disable Xdebug.
+5. Analyze the coverage file with your favorite IDE.

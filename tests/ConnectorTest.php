@@ -218,7 +218,7 @@ NOWDOC);
             $this->markTestSkipped(sprintf('Restrict end-to-end test to %s Slack message structure.', $filterSlackMessageStructure));
         }
 
-        $lastExecutionFilename = $this->getPathOfTestDirectoryFile('last_execution.txt');
+        $lastExecutionFilename = $this->getPathInTestDirectory('last_execution.txt');
         $this->assertFileDoesNotExist($lastExecutionFilename);
 
         $connector = new Connector();

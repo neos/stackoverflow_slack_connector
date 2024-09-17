@@ -111,7 +111,14 @@ class Connector
             $questionsUrlQuery['key'] = $this->stackAppsKey;
         }
         $questionsUrl = $this->stackExchangeApiUrl . '/questions?' . http_build_query($questionsUrlQuery);
-        $questions = file_get_contents('compress.zlib://' . $questionsUrl);
+
+        $context = stream_context_create([
+            'http' => [
+                'user_agent' => 'neos-slack-connector'
+            ]
+        ]);
+
+        $questions = file_get_contents('compress.zlib://' . $questionsUrl, false, $context);
 
         return json_decode($questions, true);
     }
